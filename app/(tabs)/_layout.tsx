@@ -1,8 +1,8 @@
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { View, TouchableOpacity, StyleSheet, Animated, Easing } from "react-native";
 import { useEffect, useRef } from "react";
-import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, TAB_BAR_HEIGHT } from "@/constants/theme";
 
 function SOSButton() {
@@ -49,6 +49,16 @@ function SOSButton() {
 }
 
 export default function TabLayout() {
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/auth/login");
+    }
+  }, [user, isLoading]);
+
+  if (!user) return null;
+
   return (
     <Tabs
       screenOptions={{
@@ -69,7 +79,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="checkin"
         options={{
@@ -79,7 +88,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="sos-placeholder"
         options={{
@@ -89,7 +97,6 @@ export default function TabLayout() {
           tabBarButton: () => <SOSButton />,
         }}
       />
-
       <Tabs.Screen
         name="circle"
         options={{
@@ -99,7 +106,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="timeline"
         options={{
@@ -109,7 +115,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
