@@ -2,10 +2,6 @@
 
 A timed check-in and emergency alert app. Start a timer before walking home or meeting someone; if you don't check back in, trusted contacts are alerted automatically with your location. A one-tap SOS button handles immediate emergencies independently of the timer.
 
-## Why it matters
-
-Most safety apps require the user to actively ask for help. This app assumes the opposite: silence is the signal. If the check-in timer isn't cancelled in time, an alert is dispatched without further input from the user.
-
 ## Features
 
 - **Timed Check-In** — set a label and duration, then cancel ("I'm Safe") before it expires
