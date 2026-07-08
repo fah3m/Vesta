@@ -1,50 +1,70 @@
-# Welcome to your Expo app 👋
+# vesta — Personal Safety Check-In App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A timed check-in and emergency alert app. Start a timer before walking home or meeting someone; if you don't check back in, trusted contacts are alerted automatically with your location. A one-tap SOS button handles immediate emergencies independently of the timer.
 
-## Get started
+## Why it matters
 
-1. Install dependencies
+Most safety apps require the user to actively ask for help. This app assumes the opposite: silence is the signal. If the check-in timer isn't cancelled in time, an alert is dispatched without further input from the user.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- **Timed Check-In** — set a label and duration, then cancel ("I'm Safe") before it expires
+- **Extend** — add time to an active check-in without restarting it
+- **One-Tap SOS** — immediate alert to trusted contacts, independent of any check-in
+- **Trusted Circle** — manage the contacts who receive alerts
+- **Timeline** — history of check-ins and alerts
+- **Vault** — secure storage for sensitive information shared only during an alert
+- **Location handling** — check-in starts immediately using a cached location fix, then upgrades to a precise GPS fix in the background; SOS requires a live location fix before sending, since an alert without location is not actionable for responders
+- **Server-side timers** — expiry is scheduled on the backend rather than tracked on-device, so it fires even if the app is closed or the device loses power
 
-   ```bash
-   npx expo start
-   ```
+## Tech Stack
 
-In the output, you'll find options to open the app in a
+Expo / React Native, Convex (real-time database, mutations, scheduled functions), expo-location, Expo Router
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Architecture
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+┌──────────────────────┐         ┌───────────────────────────┐
+│   Expo / React        │ hooks   │          Convex             │
+│   Native client        │◄──────►│  (queries / mutations /     │
+│                        │         │   scheduled functions)      │
+└──────────────────────┘         └───────────────────────────┘
+          │                                    │
+          │ expo-location                      │ ctx.scheduler
+          ▼                                    ▼
+   Device GPS / cache               Server-side timers
+                                     (expiry, alert dispatch)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The check-in countdown is scheduled on the Convex backend via `ctx.scheduler`, not tracked with a client-side timer. This means expiry and alert dispatch still occur on time even if the app is closed, backgrounded, or the device loses connectivity. The client-side timer display is presentational only and is not the source of truth for when an alert fires.
 
-## Learn more
+Location is handled differently depending on urgency: check-in favors speed and starts with a cached fix, refining in the background once a live GPS fix resolves. SOS favors certainty and will not send until a location fix is available, since a delayed alert with location is preferable to an immediate one without it.
 
-To learn more about developing your project with Expo, look at the following resources:
+## File Structure
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+app/
+  (tabs)/
+    _layout.tsx
+    checkin.tsx             Check-in timer screen
+    circle.tsx              Trusted contacts management
+    home.tsx                Home screen
+    sos-placeholder.tsx     SOS entry point within tab navigation
+    timeline.tsx            History of check-ins and alerts
+    vault.tsx                Secure information storage
+    VaultScreenContent.tsx
+  auth/
+    _layout.tsx
+    index.tsx
+    modal.tsx
+    sos.tsx                  Emergency SOS screen
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+assets/
+components/
+constants/                  Shared theme and configuration
+contexts/                   Auth and other app-wide context providers
+convex/                     Backend: queries, mutations, scheduled functions
+hooks/                      Shared client-side logic (location, timers, etc.)
+scripts/
+utils/
+```

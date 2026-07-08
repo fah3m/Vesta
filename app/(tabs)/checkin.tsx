@@ -33,6 +33,7 @@ export default function CheckInScreen() {
   const [extending, setExtending] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  // Latest check-in drives which view renders below (idle/active/expired).
   const latestCheckIn = useQuery(
     api.checkIns.getLatest,
     sessionToken ? { sessionToken } : "skip"
@@ -41,6 +42,7 @@ export default function CheckInScreen() {
   const startCheckIn = useMutation(api.checkIns.startCheckIn);
   const cancelCheckIn = useMutation(api.checkIns.cancelCheckIn);
   const extendCheckIn = useMutation(api.checkIns.extendCheckIn);
+  const updateCheckInLocation = useMutation(api.checkIns.updateCheckInLocation);
 
   const { display } = useTimer(
     latestCheckIn?.status === "active" ? latestCheckIn.expiresAt : undefined
@@ -55,23 +57,38 @@ export default function CheckInScreen() {
 
     setLoading(true);
     try {
-      // Actively prompt for location right now — permission dialog and/or
-      // "turn on location services" alert fire here if needed.
-      const coords = await requestLocationForCheckIn();
-      if (!coords) {
-        // Blocked: services off or permission denied. Alerts were already
-        // shown inside requestLocationForCheckIn — don't start the check-in.
+      // Only waits on a cached location fix, not a live GPS read —
+      // keeps the timer from starting late.
+      const locResult = await requestLocationForCheckIn();
+      if (!locResult) {
+        // Services off or permission denied — alert already shown, abort.
         return;
       }
 
-      await startCheckIn({
+      const { quick, refined } = locResult;
+
+      const checkInId = await startCheckIn({
         sessionToken: sessionToken!,
         label: label.trim(),
         durationSeconds: selectedDuration,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
+        latitude: quick?.latitude,
+        longitude: quick?.longitude,
       });
       setLabel("");
+
+      // Once a precise GPS fix resolves, patch it in behind the scenes.
+      refined.then((coords) => {
+        if (coords) {
+          updateCheckInLocation({
+            sessionToken: sessionToken!,
+            checkInId,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+          }).catch(() => {
+            // Fine to ignore — check-in already has a location either way.
+          });
+        }
+      });
     } catch (err: any) {
       Alert.alert("Error", err.message);
     } finally {
@@ -110,8 +127,9 @@ export default function CheckInScreen() {
     }
   };
 
-  const starting = loading || locating;
+  const starting = loading;
 
+  // Query hasn't resolved yet.
   if (latestCheckIn === undefined) {
     return (
       <View style={styles.center}>
@@ -120,6 +138,7 @@ export default function CheckInScreen() {
     );
   }
 
+  // Expired view — shown until the user dismisses it.
   if (latestCheckIn?.status === "expired" && !dismissed) {
     return (
       <View style={styles.container}>
@@ -144,6 +163,7 @@ export default function CheckInScreen() {
     );
   }
 
+  // Active timer view.
   if (latestCheckIn?.status === "active") {
     return (
       <View style={styles.container}>
@@ -154,12 +174,19 @@ export default function CheckInScreen() {
           <Text style={styles.timerLabel}>{latestCheckIn.label}</Text>
           <Text style={styles.timerDisplay}>{display}</Text>
           <Text style={styles.timerSub}>remaining</Text>
-          <View style={styles.warningBox}>
-            <Ionicons name="alert-circle" size={16} color="#F59E0B" />
-            <Text style={styles.warningText}>
-              SOS will fire if you don't check in
-            </Text>
-          </View>
+          {locating ? (
+            <View style={styles.warningBox}>
+              <Ionicons name="location" size={16} color="#F59E0B" />
+              <Text style={styles.warningText}>Refining your location…</Text>
+            </View>
+          ) : (
+            <View style={styles.warningBox}>
+              <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+              <Text style={styles.warningText}>
+                SOS will fire if you don't check in
+              </Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -195,6 +222,7 @@ export default function CheckInScreen() {
     );
   }
 
+  // Default: idle view — set up a new check-in.
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>

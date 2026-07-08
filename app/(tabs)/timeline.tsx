@@ -30,7 +30,8 @@ const EVENT_ICON: Record<
   checkin_expired: { name: "warning", color: COLORS.warning },
   sos_triggered: { name: "alert-circle", color: COLORS.sos },
 };
-
+// Formats timestamps into a user-friendly format
+// (Today, Yesterday, ---- full date)
 function formatTimestamp(ts: number) {
   const date = new Date(ts);
   const now = new Date();
@@ -45,6 +46,7 @@ function formatTimestamp(ts: number) {
 
 export default function TimelineScreen() {
   const { sessionToken } = useAuth();
+  // fetch user timeline from backend
   const events = useQuery(
     api.timeline.listEvents,
     sessionToken ? { sessionToken } : "skip"
@@ -69,6 +71,8 @@ export default function TimelineScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
+  
+            // get the icon associated w/ the current home type
             const icon = EVENT_ICON[item.type];
             return (
               <View style={styles.row}>

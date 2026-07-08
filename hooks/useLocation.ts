@@ -4,6 +4,11 @@ import { Alert, Linking, Platform } from "react-native";
 
 type LatLng = { latitude: number; longitude: number };
 
+type CheckInLocationResult = {
+  quick: LatLng | null;
+  refined: Promise<LatLng | null>;
+};
+
 export function useLocation() {
   const [location, setLocation] = useState<LatLng | null>(null);
   const [isFetching, setIsFetching] = useState(false);
@@ -41,22 +46,18 @@ export function useLocation() {
     );
   }, []);
 
-  /**
-   * Call this at the START of every check-in.
-   * Prompts for permission and/or enabling location services as needed.
-   * Returns coords on success, or null — treat null as "block the check-in".
-   */
-  const requestLocationForCheckIn = useCallback(async (): Promise<LatLng | null> => {
+  const requestLocationForCheckIn = useCallback(async (): Promise<CheckInLocationResult | null> => {
     setIsFetching(true);
     try {
-      // 1. System-level location services must be on
+      // 1. System-level location services
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
         await promptEnableServices();
+        setIsFetching(false);
         return null;
       }
 
-      // 2. Foreground permission — re-checked every call, prompts if not yet granted
+      // 2. Foreground permission
       const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
       let finalStatus = existingStatus;
 
@@ -66,28 +67,43 @@ export function useLocation() {
       }
 
       if (finalStatus !== "granted") {
-        // OS already showed its native prompt above; if still denied
-        // (e.g. previously "don't ask again"), send them to Settings.
         promptPermissionDenied();
+        setIsFetching(false);
         return null;
       }
 
-      // 3. Fresh fix for this check-in
-      const fresh = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // 3. Fast path: cached fix, if recent enough. Resolves near-instantly.
+      let quick: LatLng | null = null;
+      try {
+        const last = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 });
+        if (last) {
+          quick = { latitude: last.coords.latitude, longitude: last.coords.longitude };
+          setLocation(quick);
+        }
+      } catch {
+        // No cache available — fall through, refined fetch below still runs.
+      }
 
-      const coords = {
-        latitude: fresh.coords.latitude,
-        longitude: fresh.coords.longitude,
-      };
-      setLocation(coords);
-      return coords;
+      // don't have to block on it. isFetching stays true until this settles.
+      const refined = Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      })
+        .then((fresh) => {
+          const coords = {
+            latitude: fresh.coords.latitude,
+            longitude: fresh.coords.longitude,
+          };
+          setLocation(coords);
+          return coords;
+        })
+        .catch(() => null)
+        .finally(() => setIsFetching(false));
+
+      return { quick, refined };
     } catch {
       Alert.alert("Couldn't Get Location", "We weren't able to determine your location. Please try again.");
-      return null;
-    } finally {
       setIsFetching(false);
+      return null;
     }
   }, [promptEnableServices, promptPermissionDenied]);
 

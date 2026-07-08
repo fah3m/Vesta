@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, RADIUS, FONT } from "@/constants/theme";
 import { useEffect, useRef } from "react";
 import { Audio } from "expo-av";
-
+// reTURNs relative time (2hr 1hr 3hr x min etc)
 function timeAgo(timestamp: number) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   if (seconds < 60) return `${seconds}s ago`;
@@ -25,6 +25,7 @@ function timeAgo(timestamp: number) {
   return `${hours}h ago`;
 }
 
+//siren for sos
 async function playAlertSound() {
   try {
     await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
@@ -46,6 +47,7 @@ async function playAlertSound() {
 export default function HomeScreen() {
   const { user, sessionToken, logout } = useAuth();
 
+  //user checkin fetch
   const activeCheckIn = useQuery(
     api.checkIns.getActive,
     sessionToken ? { sessionToken } : "skip"
@@ -207,7 +209,7 @@ export default function HomeScreen() {
         <Ionicons name="chevron-forward" size={18} color={COLORS.muted} />
       </TouchableOpacity>
 
-      {/* SOS SHORTCUT */}
+      {/* SOS SHORTUT */}
       <TouchableOpacity
         style={styles.sosShortcut}
         onPress={() => router.push("/sos")}

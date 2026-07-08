@@ -32,6 +32,8 @@ const FILTER_OPTIONS = [
   ...CATEGORIES,
 ];
 
+
+// Sorting options available for organizing stored evidence
 const SORT_OPTIONS = [
   { key: "newest", label: "Newest first", icon: "arrow-down-outline" },
   { key: "oldest", label: "Oldest first", icon: "arrow-up-outline" },
@@ -117,7 +119,7 @@ function DropdownButton({ icon, label, options, selectedKey, onSelect }) {
 
 export default function VaultScreen() {
   const { sessionToken } = useAuth();
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(false); 
   const [selectedCategory, setSelectedCategory] = useState("photo"); // category for the NEXT upload
   const [filterCategory, setFilterCategory] = useState("all"); // which items are shown
   const [sortBy, setSortBy] = useState("newest"); // how shown items are ordered
@@ -271,7 +273,6 @@ export default function VaultScreen() {
         </Text>
       </View>
 
-      {/* SORT + FILTER — tidied into a single row of compact dropdowns */}
       <View style={styles.controlsRow}>
         <DropdownButton
           icon="filter-outline"
@@ -451,7 +452,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: "800", color: "#F0F0F0" },
   subtitle: { fontSize: 13, color: "#666", marginTop: 4 },
 
-  // Tidied controls row — two compact dropdown pills instead of two full chip rows
   controlsRow: {
     flexDirection: "row",
     gap: 10,

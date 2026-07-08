@@ -47,6 +47,26 @@ export const startCheckIn = mutation({
   },
 });
 
+export const updateCheckInLocation = mutation({
+  args: {
+    sessionToken: v.string(),
+    checkInId: v.id("checkIns"),
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.sessionToken);
+    const checkIn = await ctx.db.get(args.checkInId);
+    if (!checkIn || checkIn.userId !== user._id) throw new Error("Not found");
+    if (checkIn.status !== "active") return; // no-op if already cancelled/expired
+
+    await ctx.db.patch(args.checkInId, {
+      latitude: args.latitude,
+      longitude: args.longitude,
+    });
+  },
+});
+
 export const cancelCheckIn = mutation({
   args: {
     sessionToken: v.string(),
@@ -116,8 +136,8 @@ export const handleExpiry = internalMutation({
     await ctx.scheduler.runAfter(0, internal.sos.triggerAlert, {
       userId: checkIn.userId,
       checkInId,
-      latitude: checkIn.latitude,    // ← pass stored location
-      longitude: checkIn.longitude,  // ← pass stored location
+      latitude: checkIn.latitude,
+      longitude: checkIn.longitude,
     });
   },
 });
@@ -134,14 +154,12 @@ export const extendCheckIn = mutation({
     if (!checkIn || checkIn.userId !== user._id) throw new Error("Not found");
     if (checkIn.status !== "active") throw new Error("Check-in is not active");
 
-    // Cancel existing scheduled expiry
     if (checkIn.scheduledFnId) {
       await ctx.scheduler.cancel(checkIn.scheduledFnId);
     }
 
     const newExpiresAt = checkIn.expiresAt + args.extraSeconds * 1000;
 
-    // Schedule new expiry
     const scheduledFnId = await ctx.scheduler.runAt(
       newExpiresAt,
       internal.checkIns.handleExpiry,

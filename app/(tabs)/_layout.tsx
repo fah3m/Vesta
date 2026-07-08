@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, TAB_BAR_HEIGHT } from "@/constants/theme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
+// Custom floating button rendered in place of a tab icon (see
+// "sos-placeholder" screen below) — not a real tab, just a bar slot.
 function SOSButton() {
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -54,6 +56,8 @@ export default function TabLayout() {
   usePushNotifications();
 
   useEffect(() => {
+    // Wait for auth to resolve before redirecting to avoid a false
+    // redirect while the session is still being restored.
     if (!isLoading && !user) {
       router.replace("/auth/login");
     }
@@ -90,6 +94,7 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Reserves the center tab slot; renders SOSButton instead of an icon. */}
       <Tabs.Screen
         name="sos-placeholder"
         options={{
@@ -117,8 +122,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Vault is no longer a tab bar item — it stays reachable at /vault via
-          the Home screen's "Evidence Vault" quick-action card (Step 9). */}
+      {/* href: null — reachable screens, hidden from the tab bar itself. */}
       <Tabs.Screen name="vault" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
@@ -143,6 +147,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginTop: 2,
   },
+  // top: -28 lifts the button above the bar for a floating FAB look.
   fabWrapper: {
     position: "relative",
     width: 64,

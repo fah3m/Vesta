@@ -22,41 +22,51 @@ export default function SOSScreen() {
   const [triggered, setTriggered] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSOS = async () => {
-    Alert.alert(
-      "Send SOS Alert?",
-      "This will alert all your trusted contacts immediately.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Send SOS",
-          style: "destructive",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              // Prompt for permission / location services here, same as
-              // check-in. But unlike check-in, we do NOT block the alert
-              // if this comes back null — an SOS must go out either way.
-              const coords = await requestLocationForCheckIn();
+ const handleSOS = async () => {
+  Alert.alert(
+    "Send SOS Alert?",
+    "This will alert all your trusted contacts immediately.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Send SOS",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            const locResult = await requestLocationForCheckIn();
 
-              await triggerManual({
-                sessionToken: sessionToken!,
-                latitude: coords?.latitude,
-                longitude: coords?.longitude,
-              });
-              setTriggered(true);
-            } catch (err: any) {
-              Alert.alert("Error", err.message);
-            } finally {
-              setLoading(false);
+            if (!locResult) {
+              // Location services off or permission denied — the
+              // relevant alert was already shown inside
+              // requestLocationForCheckIn. Do NOT send SOS without
+              // location; let the person resolve it and try again.
+              return;
             }
-          },
-        },
-      ]
-    );
-  };
 
-  const busy = loading || locating;
+            const quick = locResult.quick;
+
+            await triggerManual({
+              sessionToken: sessionToken!,
+              latitude: quick?.latitude,
+              longitude: quick?.longitude,
+            });
+            setTriggered(true);
+          } catch (err: any) {
+            Alert.alert("Error", err.message);
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]
+  );
+};
+
+  // Only reflects the button's own loading state now — `locating` from the
+  // hook stays true through the background `refined` fetch, which SOS
+  // doesn't wait on, so it shouldn't hold the button in a spinning state.
+  const busy = loading;
 
   if (triggered) {
     return (

@@ -4,11 +4,11 @@ import { v } from "convex/values";
 export default defineSchema({
   users: defineTable({
   name: v.string(),
-  username: v.string(),        // was: email: v.string(),
+  username: v.string(),        
   passwordHash: v.string(),
   pushToken: v.optional(v.string()),
   createdAt: v.number(),
-}).index("by_username", ["username"]),   // was: .index("by_email", ["email"]),
+}).index("by_username", ["username"]),  
 
   sessions: defineTable({
     userId: v.id("users"),
@@ -19,7 +19,7 @@ export default defineSchema({
   trustedContacts: defineTable({
   ownerId: v.id("users"),
   contactUserId: v.optional(v.id("users")),
-  username: v.string(),        // was: email: v.string(),
+  username: v.string(),       
   name: v.string(),
   status: v.union(v.literal("pending"), v.literal("accepted")),
   invitedAt: v.number(),
@@ -56,8 +56,8 @@ checkIns: defineTable({
     v.literal("expired")
   ),
   scheduledFnId: v.optional(v.id("_scheduled_functions")),
-  latitude: v.optional(v.number()),   // ← add this
-  longitude: v.optional(v.number()),  // ← add this
+  latitude: v.optional(v.number()),  
+  longitude: v.optional(v.number()), 
 }).index("by_user", ["userId"]),
 
   sosAlerts: defineTable({
@@ -69,7 +69,7 @@ checkIns: defineTable({
     batteryPercent: v.optional(v.number()),
     message: v.string(),
     notifiedContacts: v.array(v.id("users")),
-    dismissedBy: v.optional(v.array(v.id("users"))), // NEW — viewers who cleared this alert
+    dismissedBy: v.optional(v.array(v.id("users"))),
   }).index("by_user", ["userId"]),
 
   timelineEvents: defineTable({

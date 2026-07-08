@@ -67,9 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSessionToken(null);
   };
 
-  // isLoading is true while:
-  // (a) we're reading SecureStore on boot, OR
-  // (b) we have a token but Convex hasn't returned the user yet
   const isLoading = isBootstrapping || (sessionToken !== null && user === undefined);
 
   return (

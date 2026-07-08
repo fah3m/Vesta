@@ -22,11 +22,13 @@ export default function CircleScreen() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  // contacts already in the user's circle (accepted or pending)
   const myContacts = useQuery(
     api.trustedContacts.listMyContacts,
     sessionToken ? { sessionToken } : "skip"
   );
 
+  // invites sent to this user by someone else, awaiting accept
   const pendingInvites = useQuery(
     api.trustedContacts.listPendingInvites,
     sessionToken ? { sessionToken } : "skip"
@@ -68,6 +70,7 @@ export default function CircleScreen() {
   };
 
   const handleRemove = (contactId: any, contactName: string) => {
+    // confirm before removing — this can't be undone from here
     Alert.alert(
       "Remove contact",
       `Remove ${contactName} from your trusted circle?`,
@@ -88,6 +91,7 @@ export default function CircleScreen() {
     );
   };
 
+  // wait for both queries before rendering anything
   if (myContacts === undefined || pendingInvites === undefined) {
     return (
       <View style={styles.center}>
@@ -144,6 +148,7 @@ export default function CircleScreen() {
         </View>
       )}
 
+      {/* invites someone else sent to this user */}
       {pendingInvites.map((invite) => (
         <View key={invite._id} style={styles.contactCard}>
           <View style={styles.contactInfo}>
@@ -185,7 +190,7 @@ export default function CircleScreen() {
           <FlatList
             data={myContacts}
             keyExtractor={(item) => item._id}
-            scrollEnabled={false}
+            scrollEnabled={false} // list is short and lives inside a non-scrolling screen
             renderItem={({ item }) => (
               <View style={styles.contactCard}>
                 <View style={styles.contactInfo}>
